@@ -1,17 +1,16 @@
 /**
- * FIXED VERSION — 修复 ambient 未初始化问题 + 保证变量声明顺序正确
- * Gemini 风格 SOUL 粒子交互
+ * Fullscreen SOUL particle logo with single-hand control.
+ * - Open palm: slight scatter
+ * - Fist: dynamic spiral collapse into bright 3D-ish SOUL
  */
 
-/* ---------------------- Config ---------------------- */
-const CONFIG = {
-  PARTICLE_GAP: 6,
-  NUM_MAX: 2200,
-  AMBIENT_COUNT: 100,
-  SCATTER_RADIUS: 120,
-  SPIRAL_INNER: 6,
+const CFG = {
+  GAP: 6,
+  MAX_PARTICLES: 2200,
+  AMBIENT_COUNT: 120,
+  SCATTER_RADIUS: 140,
   RETURN_SPEED: 0.16,
-  SCATTER_SPEED: 0.2,
+  SCATTER_SPEED: 0.22,
   OPEN_THRESHOLD: 1.02,
   AUDIO: {
     open: "assets/open.wav",
@@ -20,198 +19,217 @@ const CONFIG = {
   },
 };
 
-/* ---------------------- Utility ---------------------- */
-const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+let canvas = document.getElementById("canvas");
+let ctx = canvas.getContext("2d");
+
+let W = window.innerWidth;
+let H = window.innerHeight;
+
+canvas.width = W;
+canvas.height = H;
+
+window.addEventListener("resize", () => {
+  W = window.innerWidth;
+  H = window.innerHeight;
+  canvas.width = W;
+  canvas.height = H;
+  rebuildText();
+});
+
 const rand = (a, b) => a + Math.random() * (b - a);
 
-/* ---------------------------------------------------------
- *           IMPORTANT FIX — VARIABLE DECLARATION
- * --------------------------------------------------------- */
-
-let particles = [];  // 粒子数组（初始化为空）
-let ambient = [];    // 环境粒子（初始化为空）
+let particles = [];
+let ambient = [];
 let isScattered = false;
 let isCollapsing = false;
 let muted = false;
 
-/* ---------------------------------------------------------
- *           Canvas 初始化
- * --------------------------------------------------------- */
+let collapseProgress = 0;
 
-const bgCanvas = document.getElementById("bgCanvas");
-const bgCtx = bgCanvas.getContext("2d", { alpha: true });
-
-const visual = document.getElementById("visual");
-const overlay = document.createElement("canvas");
-overlay.style.position = "absolute";
-overlay.style.left = 0;
-overlay.style.top = 0;
-overlay.style.zIndex = 2;
-visual.appendChild(overlay);
-const ctx = overlay.getContext("2d", { alpha: true });
-
-let W = window.innerWidth,
-  H = window.innerHeight;
-let leftRect = visual.getBoundingClientRect();
-
-function resizeAll() {
-  W = window.innerWidth;
-  H = window.innerHeight;
-
-  bgCanvas.width = W;
-  bgCanvas.height = H;
-
-  leftRect = visual.getBoundingClientRect();
-  overlay.width = Math.max(1, Math.floor(leftRect.width));
-  overlay.height = Math.max(1, Math.floor(leftRect.height));
-
-  rebuild(); // FIX: ambient 已经声明，安全调用
-}
-
-window.addEventListener("resize", resizeAll);
-
-/* ---------------------------------------------------------
- *          下面才定义 initAmbient()（不会再提前调用）
- * --------------------------------------------------------- */
-
+// 初始化环境粒子
 function initAmbient() {
   ambient = [];
-  for (let i = 0; i < CONFIG.AMBIENT_COUNT; i++) {
+  for (let i = 0; i < CFG.AMBIENT_COUNT; i++) {
     ambient.push({
       x: Math.random() * W,
       y: Math.random() * H,
-      r: 0.6 + Math.random() * 3,
-      a: 0.02 + Math.random() * 0.08,
-      vx: (Math.random() - 0.5) * 0.15,
-      vy: (Math.random() - 0.5) * 0.15,
+      vx: (Math.random() - 0.5) * 0.18,
+      vy: (Math.random() - 0.5) * 0.18,
+      r: rand(0.6, 2.4),
+      a: rand(0.02, 0.09),
     });
   }
 }
 
-/* ---------------------------------------------------------
- *   采样文字 SOUL → 建立 particles（FIX: 顺序正确）
- * --------------------------------------------------------- */
-
+// 采样 SOUL 字样生成粒子
 const off = document.createElement("canvas");
 const octx = off.getContext("2d");
 
-function rebuild() {
-  initAmbient(); // FIX: ambient 已初始化
+function rebuildText() {
+  initAmbient();
 
-  const ow = Math.max(300, Math.floor(overlay.width * 0.9));
-  const oh = Math.max(140, Math.floor(ow * 0.28));
+  const base = Math.min(W, H) * 0.55;
+  const ow = base;
+  const oh = base * 0.28;
+
   off.width = ow;
   off.height = oh;
 
   octx.clearRect(0, 0, ow, oh);
-  const fontSize = Math.floor(oh * 0.95);
-  octx.font = `900 ${fontSize}px Inter, sans-serif`;
+  const fontSize = Math.floor(oh * 0.9);
+  octx.fillStyle = "#fff";
   octx.textAlign = "center";
   octx.textBaseline = "middle";
-  octx.fillText("SOUL", ow / 2, oh / 2);
+  octx.font = `900 ${fontSize}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
+  octx.fillText("SOUL", ow / 2, oh / 2 + oh * 0.02);
 
   const img = octx.getImageData(0, 0, ow, oh).data;
   const pts = [];
-
-  for (let y = 0; y < oh; y += CONFIG.PARTICLE_GAP) {
-    for (let x = 0; x < ow; x += CONFIG.PARTICLE_GAP) {
-      if (img[(y * ow + x) * 4 + 3] > 150) {
-        pts.push({
-          x: (overlay.width - ow) / 2 + x,
-          y: (overlay.height - oh) / 2 + y,
-        });
+  for (let y = 0; y < oh; y += CFG.GAP) {
+    for (let x = 0; x < ow; x += CFG.GAP) {
+      const a = img[(y * ow + x) * 4 + 3];
+      if (a > 160) {
+        const cx = W / 2 - ow / 2 + x;
+        const cy = H * 0.45 - oh / 2 + y;
+        pts.push({ x: cx, y: cy });
       }
     }
   }
+  if (pts.length > CFG.MAX_PARTICLES) pts.length = CFG.MAX_PARTICLES;
 
-  if (pts.length > CONFIG.NUM_MAX) pts.length = CONFIG.NUM_MAX;
-
-  particles = pts.map((p) => {
-    const layer = Math.floor(Math.random() * 3);
-    const depth = (layer - 1) * 5;
+  particles = pts.map((p, i) => {
+    const layer = Math.floor(Math.random() * 3); // 0 back, 1 mid, 2 front
+    const depth = (layer - 1) * 6;
+    const homeX = p.x + depth * 0.2;
+    const homeY = p.y + depth * 0.6;
+    const angle = Math.random() * Math.PI * 2;
     return {
-      x: p.x,
-      y: p.y,
-      homeX: p.x,
-      homeY: p.y,
+      x: homeX + rand(-20, 20),
+      y: homeY + rand(-20, 20),
+      homeX,
+      homeY,
       layer,
       depth,
-      size: 1 + Math.random() * 1.8,
-      glow: 4 + Math.random() * 8,
-      scatterX: p.x,
-      scatterY: p.y,
+      size: rand(1.0, 2.3),
+      glow: rand(6, 11),
+      scatterX: homeX + Math.cos(angle) * rand(40, CFG.SCATTER_RADIUS),
+      scatterY: homeY + Math.sin(angle) * rand(30, CFG.SCATTER_RADIUS),
     };
   });
 }
 
-resizeAll();
+rebuildText();
 
-/* ---------------------------------------------------------
- *                动画渲染 (保持完整)
- * --------------------------------------------------------- */
+/* ---------------- 渲染主循环 ---------------- */
 
 let last = performance.now();
-function animate(t) {
+
+function render(t) {
   const dt = (t - last) / 16.67;
   last = t;
 
-  drawBackground(t);
-  ctx.clearRect(0, 0, overlay.width, overlay.height);
+  // 背景
+  ctx.clearRect(0, 0, W, H);
+  const g = ctx.createRadialGradient(
+    W * 0.15,
+    H * 0.15,
+    0,
+    W * 0.5,
+    H * 0.6,
+    Math.max(W, H)
+  );
+  g.addColorStop(0, "#18182f");
+  g.addColorStop(0.4, "#070719");
+  g.addColorStop(1, "#02020a");
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
 
-  particles.forEach((p) => {
-    if (isScattered) {
-      p.x += (p.scatterX - p.x) * CONFIG.SCATTER_SPEED * dt;
-      p.y += (p.scatterY - p.y) * CONFIG.SCATTER_SPEED * dt;
-    } else if (isCollapsing) {
-      const cx = overlay.width / 2,
-        cy = overlay.height / 2;
-      const dx = p.x - cx,
-        dy = p.y - cy;
-      const r = Math.sqrt(dx * dx + dy * dy) * 0.9;
-      const a = Math.atan2(dy, dx) + 0.2;
-      p.x = cx + r * Math.cos(a);
-      p.y = cy + r * Math.sin(a);
-    } else {
-      p.x += (p.homeX - p.x) * CONFIG.RETURN_SPEED * dt;
-      p.y += (p.homeY - p.y) * CONFIG.RETURN_SPEED * dt;
-    }
+  // 环境粒子
+  for (const a of ambient) {
+    a.x += a.vx * dt;
+    a.y += a.vy * dt;
+    if (a.x < -40) a.x = W + 40;
+    if (a.x > W + 40) a.x = -40;
+    if (a.y < -40) a.y = H + 40;
+    if (a.y > H + 40) a.y = -40;
 
+    ctx.globalAlpha = a.a;
+    ctx.fillStyle = "rgba(180,200,255,1)";
     ctx.beginPath();
-    ctx.fillStyle = "#ff70bf";
-    ctx.globalAlpha = 0.9;
-    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
     ctx.fill();
-  });
+  }
 
-  requestAnimationFrame(animate);
+  // 粒子层：后 -> 中 -> 前
+  for (let pass = 0; pass < 3; pass++) {
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      if (p.layer !== pass) continue;
+
+      const cx = W / 2;
+      const cy = H * 0.45;
+
+      if (isScattered) {
+        // 轻微散开，目标为 scatterX/Y
+        const tx =
+          p.scatterX + Math.sin((t / 900 + i * 0.01)) * 2.0 * (p.layer + 1);
+        const ty =
+          p.scatterY + Math.cos((t / 1000 + i * 0.013)) * 2.0 * (p.layer + 1);
+        p.x += (tx - p.x) * CFG.SCATTER_SPEED * dt;
+        p.y += (ty - p.y) * CFG.SCATTER_SPEED * dt;
+      } else if (isCollapsing) {
+        // 动态收拢：螺旋 + 半径缩小
+        const dx = p.x - cx;
+        const dy = p.y - cy;
+        const r0 = Math.sqrt(dx * dx + dy * dy) || 1;
+        const angle = Math.atan2(dy, dx) + 0.3 * dt * (1.2 + p.layer * 0.3);
+        const r = Math.max(6 + p.layer * 2, r0 * (0.9 - 0.02 * p.layer));
+        const tx = cx + r * Math.cos(angle);
+        const ty = cy + r * Math.sin(angle);
+        p.x += (tx - p.x) * 0.35 * dt;
+        p.y += (ty - p.y) * 0.35 * dt;
+      } else {
+        // 回到 home (保持立体字样)
+        p.x += (p.homeX - p.x) * CFG.RETURN_SPEED * dt;
+        p.y += (p.homeY - p.y) * CFG.RETURN_SPEED * dt;
+      }
+
+      // glow
+      ctx.globalAlpha = 0.05 + p.layer * 0.03;
+      ctx.fillStyle = "rgba(255,90,190,1)";
+      ctx.beginPath();
+      ctx.ellipse(
+        p.x,
+        p.y + p.depth * 0.4,
+        p.glow * 2.3,
+        p.glow * 1.8,
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.fill();
+
+      // 核心粒子
+      ctx.globalAlpha = 1;
+      const color =
+        p.layer === 2
+          ? "#ffe7ff"
+          : p.layer === 1
+          ? "#ffd0ff"
+          : "#b3d4ff";
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  requestAnimationFrame(render);
 }
 
-requestAnimationFrame(animate);
+requestAnimationFrame(render);
 
-/* ---------------------------------------------------------
- *                 背景环境粒子渲染
- * --------------------------------------------------------- */
-
-function drawBackground(t) {
-  bgCtx.clearRect(0, 0, W, H);
-
-  bgCtx.fillStyle = "#f7f9ff";
-  bgCtx.fillRect(0, 0, W, H);
-
-  ambient.forEach((a) => {
-    a.x += a.vx;
-    a.y += a.vy;
-    bgCtx.globalAlpha = a.a;
-    bgCtx.fillStyle = "rgba(255,110,200,1)";
-    bgCtx.beginPath();
-    bgCtx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
-    bgCtx.fill();
-  });
-}
-
-/* ---------------------------------------------------------
- *               手势识别（保持不变）
- * --------------------------------------------------------- */
+/* --------------- 手势识别：单手张开/握拳 --------------- */
 
 const video = document.createElement("video");
 video.style.display = "none";
@@ -229,61 +247,116 @@ hands.setOptions({
   minTrackingConfidence: 0.6,
 });
 
-hands.onResults(onHands);
+hands.onResults(onHandsResults);
 
-let cam;
+let cam = null;
 
 async function startCamera() {
   try {
     cam = new Camera(video, {
-      onFrame: async () => await hands.send({ image: video }),
+      onFrame: async () => {
+        await hands.send({ image: video });
+      },
       width: 640,
       height: 480,
     });
     await cam.start();
-  } catch {
-    overlay.addEventListener("click", toggleScatter);
+  } catch (e) {
+    console.warn("camera start failed:", e);
+    // 如果摄像头失败，可以点击屏幕手动切换动画
+    canvas.addEventListener("click", toggleMode);
   }
 }
 
 startCamera();
 
-function onHands(results) {
-  if (!results.multiHandLandmarks.length) return;
+let prevOpen = null;
 
-  const lm = results.multiHandLandmarks[0];
+function dist(a, b) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+}
 
-  function dist(a, b) {
-    return Math.hypot(a.x - b.x, a.y - b.y);
-  }
+function onHandsResults(res) {
+  if (!res.multiHandLandmarks || res.multiHandLandmarks.length === 0) return;
+  const lm = res.multiHandLandmarks[0];
 
   const wrist = lm[0];
   const base = dist(wrist, lm[9]) || 0.0001;
-
   const tips = [8, 12, 16, 20, 4];
-  const openness =
-    tips.reduce((s, i) => s + dist(wrist, lm[i]), 0) / tips.length / base;
+  let sum = 0;
+  for (const i of tips) sum += dist(wrist, lm[i]);
+  const avg = sum / tips.length;
+  const openness = avg / base;
+  const isOpen = openness > CFG.OPEN_THRESHOLD;
 
-  if (openness > CONFIG.OPEN_THRESHOLD) {
-    triggerOpen();
+  if (prevOpen === null) {
+    prevOpen = isOpen;
+    return;
+  }
+  if (isOpen === prevOpen) return;
+  prevOpen = isOpen;
+
+  if (isOpen) {
+    onOpenPalm();
   } else {
-    triggerClose();
+    onFist();
   }
 }
 
-/* ------------------ Gesture Actions ------------------ */
+/* --------------- 状态切换与音效 ---------------- */
 
-function triggerOpen() {
+function playSound(kind) {
+  const path = CFG.AUDIO[kind];
+  if (!path || muted) return;
+  try {
+    const a = new Audio(path);
+    a.play();
+  } catch (e) {
+    // ignore
+  }
+}
+
+function onOpenPalm() {
   isScattered = true;
   isCollapsing = false;
+  collapseProgress = 0;
+  playSound("open");
+
+  for (const p of particles) {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = rand(40, CFG.SCATTER_RADIUS);
+    p.scatterX = p.homeX + Math.cos(angle) * radius;
+    p.scatterY = p.homeY + Math.sin(angle) * radius;
+  }
 }
 
-function triggerClose() {
+function onFist() {
   isScattered = false;
   isCollapsing = true;
+  collapseProgress = 0;
+  playSound("close");
 }
 
-function toggleScatter() {
-  if (isCollapsing) isCollapsing = false;
-  else isCollapsing = true;
+function toggleMode() {
+  if (isCollapsing) {
+    isCollapsing = false;
+    isScattered = true;
+    onOpenPalm();
+  } else if (isScattered) {
+    onFist();
+  } else {
+    onOpenPalm();
+  }
+}
+
+/* --------------- 进入网站按钮绑定 --------------- */
+
+const enterBtn = document.getElementById("enterBtn");
+if (enterBtn) {
+  enterBtn.addEventListener("click", () => {
+    playSound("enter");
+    window.location.href = "social.html"; // 跳转到你的网站页
+  });
 }
