@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>交个朋友 · AI 社交智能体 Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 100%;
+      min-height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto;
+      background: radial-gradient(circle at 20% 0%, #1b2340 0%, #0a0d1f 45%, #050615 100%);
+      color: #fff;
+      overflow-x: hidden;
+    }
+
+    /* 卡片光晕 */
+    .card {
+      background: rgba(10, 16, 40, .82);
+      border-radius: 18px;
+      border: 1px solid rgba(120, 150, 255, .18);
+      box-shadow: 0 14px 32px rgba(0, 0, 0, .45);
+      backdrop-filter: blur(18px);
+    }
+
+    /* 顶部导航 */
+    .top-nav {
+      padding: 20px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .top-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 14px;
+      border: 2px solid #19e0d8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at 10% 0%, rgba(150, 150, 150, .35) 0, transparent 35%),
+        radial-gradient(circle at 60% 80%, rgba(60, 60, 60, .5) 0, transparent 55%),
+        radial-gradient(circle at 50% 50%, #11151b 0, #05070b 65%, #000 100%);
+      font-weight: 800;
+      font-size: 17px;
+    }
+
+    .top-logo .l {
+      color: #19e0d8;
+    }
+
+    .nav-btn {
+      padding: 6px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, .2);
+      background: rgba(20, 30, 60, .6);
+      font-size: 12px;
+      cursor: pointer;
+      color: #fff;
+    }
+
+    .nav-btn:hover {
+      background: rgba(45, 70, 130, .9);
+    }
+
+    /* 介绍区 */
+    .hero {
+      padding: 40px 32px 10px 32px;
+      max-width: 1000px;
+      margin: auto;
+    }
+
+    .title {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1.5;
+      margin-bottom: 14px;
+    }
+
+    .title .accent {
+      color: #a88bff;
+    }
+
+    .subtitle {
+      opacity: .9;
+      font-size: 15px;
+      line-height: 1.8;
+      max-width: 720px;
+    }
+
+    /* 内容模块 */
+    .sections {
+      padding: 20px 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      max-width: 1100px;
+      margin: auto;
+    }
+
+    .section {
+      padding: 24px;
+      border-radius: 18px;
+      background: rgba(10, 16, 40, .82);
+      border: 1px solid rgba(120, 150, 255, .22);
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .section p {
+      opacity: .85;
+      line-height: 1.8;
+      font-size: 14px;
+    }
+
+    /* 主聊天布局 */
+    .chat-layout {
+      max-width: 1200px;
+      margin: 40px auto;
+      display: grid;
+      grid-template-columns: minmax(0, 3fr) minmax(260px, 1.6fr);
+      gap: 28px;
+      padding: 0 32px;
+    }
+
+    /* 聊天窗口 */
+    .chat-card {
+      height: 520px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chat-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid rgba(120, 150, 255, .2);
+      font-size: 13px;
+      opacity: .85;
+    }
+
+    #chatHistory {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      scroll-behavior: smooth;
+    }
+
+    .bubble {
+      padding: 10px 14px;
+      border-radius: 14px;
+      max-width: 80%;
+      margin-bottom: 12px;
+      line-height: 1.6;
+      font-size: 14px;
+      word-break: break-word;
+    }
+
+    .bubble.user {
+      margin-left: auto;
+      background: linear-gradient(135deg, #6db5ff, #d17bff);
+    }
+
+    .bubble.ai {
+      margin-right: auto;
+      background: rgba(15, 22, 60, .96);
+      border: 1px solid rgba(140, 160, 255, .35);
+    }
+
+    /* 输入区 */
+    .chat-input-bar {
+      padding: 12px;
+      border-top: 1px solid rgba(120, 150, 255, .25);
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+    
+      /* 关键！让内部 absolute 元素相对这里定位 */
+      position: relative;
+    }
+
+
+    #chatInput {
+      flex: 1;
+      min-height: 44px;
+      max-height: 100px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(150, 160, 255, .35);
+      background: rgba(5, 8, 25, .9);
+      color: #fff;
+      resize: none;
+      font-size: 14px;
+      outline: none;
+    }
+
+    /* 发送按钮 */
+    .send-btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #8fd3ff, #e58bff);
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      color: #050615;
+    }
+
+    /* 清空 */
+    .clear-btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      border-radius: 10px;
+      background: rgba(80, 90, 150, .55);
+      border: 1px solid rgba(150, 160, 255, .25);
+      cursor: pointer;
+      color: #ddd;
+    }
+
+    /* 表情 */
+    #emojiBtn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(180, 100, 255, .85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 22px;
+    }
+
+    #emojiPicker {
+      position: absolute;
+      bottom: 60px;   /* 在输入框上方 */
+      left: 0;        /* 从左开始对齐 */
+      transform: translateX(0);
+      
+      background: #0f132d;
+      border: 1px solid rgba(150, 150, 255, .3);
+      padding: 10px;
+      border-radius: 12px;
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 240px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 999; /* 避免被遮挡 */
+    }
+
+
+    #emojiPicker span {
+      font-size: 20px;
+      cursor: pointer;
+      transition: .15s;
+    }
+
+    #emojiPicker span:hover {
+      transform: scale(1.25);
+    }
+
+    /* 情绪面板 */
+    .side-panel {
+      padding: 20px;
+      border-radius: 18px;
+      border: 1px solid rgba(150, 160, 255, .25);
+      background: rgba(10, 16, 40, .85);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      height: 520px;
+    }
+
+    .side-title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .mood-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #9cf;
+      box-shadow: 0 0 14px currentColor;
+      animation: breathe 2.4s infinite ease-in-out;
+    }
+
+    @keyframes breathe {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.35);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .badge {
+      display:inline-block;
+      padding:5px 10px;
+      background:rgba(30,40,80,.9);
+      border:1px solid rgba(140,160,255,.4);
+      border-radius:999px;
+      font-size:12px;
+    
+      /* 这行就是关键！设置文字为白色 */
+      color:#fff !important;
+    
+      margin-right:6px;
+      margin-bottom:6px;
+      cursor:pointer;
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <!-- 顶部导航 -->
+  <div class="top-nav">
+    <div class="nav-left">
+      <div class="top-logo">Sou<span class="l">l</span></div>
+      <div>交个朋友 · AI 社交智能体</div>
+    </div>
+    <button class="nav-btn" onclick="location.href='index.html'">返回粒子首页</button>
+  </div>
+
+  <!-- 介绍内容 -->
+  <div class="hero">
+    <div class="title">帮你先 <span class="accent">“读懂聊天”</span>，再教你怎么交个朋友</div>
+    <p class="subtitle">
+      「交个朋友」是一位懂情绪、懂语境的 AI 社交教练。
+      它会分析你和对方的聊天内容、语气、氛围，并给出自然、得体、不尴尬的沟通建议。
+    </p>
+  </div>
+
+  <div class="sections">
+
+    <div class="section">
+      <div class="section-title">🔮 粒子 Soul 动效：灵魂聚散的视觉隐喻</div>
+      <p>
+        用户进入体验站时看到的，是由上万颗粒子在空间中逐步聚合成的「Soul」Logo。
+        整个动效象征一种「靠近—分开—再靠近」的社交节奏。
+        <br><br>
+        ✋ 当用户张开手掌时：  
+        粒子会从 Logo 中爆开，化成满屏星云。不同星层会有轻微漂移，营造空间感。
+        <br><br>
+        ✊ 当用户握拳时：  
+        粒子会缓慢地从星空回落，重新聚成 Soul 品牌形状，并形成轻微的呼吸式跳动。
+        <br><br>
+        手势识别基于 MediaPipe Hands 实现，粒子计算使用 Canvas 逐粒插值，确保流畅度和质感。
+        这是对「灵魂落地」「人与人靠近」的视觉表达，也是整个交互体验的第一印象。
+      </p>
+    </div>
+
+
+    <div class="section">
+      <div class="section-title">🧠 交个朋友 · AI 社交智能体怎么用？</div>
+      <p>
+        这个 AI 的设计目标，是帮用户在真实聊天中解决「不知道说什么」的困境。
+        操作方式非常简单：
+        <br><br>
+    
+        1️⃣ <b>在输入框写下你的聊天场景</b> ——  
+        例如：「昨晚她突然变冷淡，我要继续聊吗？」  
+        AI 会自动分析你的情绪、语气、上下文，识别是否是冷场、降温、尴尬、试探等状态。
+    
+        <br><br>
+    
+        2️⃣ <b>点击『生成』</b> ——  
+        AI 会返回：  
+        · 你的当前情绪判断  
+        · 对话氛围 & 对方可能的心理  
+        · 个性化沟通建议（两到三种）  
+        · 可以自然延伸的话题  
+    
+        <br><br>
+    
+        3️⃣ <b>复制你喜欢的回复方式</b> ——  
+        所有推荐语句都「得体、不油、不尴尬」，  
+        可以直接用在 Soul 的日常聊天里。
+    
+        <br><br>
+    
+        整个系统通过 DeepSeek API + 前端结构化解析实现，让每一句回复都是 AI 真正“思考”后给出的。
+      </p>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🚀 作品亮点</div>
+      <p>
+        ✔ <b>手势交互 + 粒子聚散</b> —— 用身体动作来控制品牌 Logo，增强体验沉浸感。<br>
+        ✔ <b>3D 粒子空间</b> —— 具有层级、漂移、呼吸感，使 Logo“活起来”。<br>
+        ✔ <b>结构化社交建议</b> —— 回复、洞察、情绪、话题全部由 AI 自动生成。<br>
+        ✔ <b>实时情绪波动 UI</b> —— 右侧情绪点会根据 AI 判断自动变色。<br>
+        ✔ <b>真实聊天模拟体验</b> —— 支持表情、示例点击、清空对话，完整流程化体验。<br>
+        ✔ <b>参赛方向贴合度高</b> —— 完全符合「交个朋友」社交智能体主题。<br>
+      </p>
+    </div>
+
+  </div>
+
+
+  <!-- 聊天区 -->
+  <div class="chat-layout">
+
+    <!-- 左侧聊天 -->
+    <div class="card chat-card">
+
+      <div class="chat-header">AI 社交教练 · Demo —— 在这里输入你的真实聊天困惑 / 想说的话</div>
+
+      <div id="chatHistory"></div>
+
+      <!-- 输入区 -->
+      <div class="chat-input-bar">
+        <div id="emojiBtn">😊</div>
+        <textarea id="chatInput" placeholder="输入你的聊天困惑，例如：她突然三小时不回我，我要继续等吗？"></textarea>
+        <button id="sendBtn" class="send-btn">生成</button>
+        <button id="clearBtn" class="clear-btn">清空对话</button>
+      </div>
+
+      <div id="thinkingHint" style="font-size:12px;color:rgba(255,255,255,.65);margin:6px 12px;display:none;">
+        AI 正在分析你的聊天语境...
+      </div>
+
+      <!-- 示例 -->
+      <div style="padding:10px 12px;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="badge" onclick="fillExample('最近聊天总是冷场怎么办？')">最近聊天总是冷场怎么办？</button>
+        <button class="badge" onclick="fillExample('她突然变得冷淡，是不是不想聊了？')">她突然变得冷淡，是不是不想聊了？</button>
+        <button class="badge" onclick="fillExample('想把聊天变得轻松一点但不油腻，有什么自然的话题？')">想把聊天变得轻松一点但不油腻？</button>
+      </div>
+
+    </div>
+
+    <!-- 右侧情绪&建议 -->
+    <div class="card side-panel">
+
+      <div>
+        <div class="side-title">本轮情绪 · 情感温度</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="mood-dot" id="moodDot"></div>
+          <div id="moodText">等待输入…</div>
+        </div>
+      </div>
+
+      <div>
+        <div class="side-title">聊天洞察</div>
+        <div id="insightsList" style="font-size:13px;line-height:1.6;opacity:.9;">
+          输入聊天内容后，这里会显示分析结果。
+        </div>
+      </div>
+
+      <div>
+        <div class="side-title">沟通建议</div>
+        <div id="suggestList" style="font-size:13px;line-height:1.6;"></div>
+      </div>
+
+      <div>
+        <div class="side-title">延伸话题</div>
+        <div id="topicBadges"></div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- 表情选择器 -->
+  <div id="emojiPicker">
+    <span>😂</span><span>🤣</span><span>😊</span><span>😌</span><span>😎</span>
+    <span>😉</span><span>😍</span><span>😳</span><span>😮</span><span>😡</span>
+    <span>😭</span><span>🤔</span><span>👏</span><span>👍</span><span>👎</span>
+    <span>🙏</span><span>✨</span><span>❤️</span><span>💜</span><span>🌙</span>
+  </div>
+
+
+  <!-- JS 逻辑 -->
+  <script>
+    const chatHistoryEl = document.getElementById("chatHistory");
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const clearBtn = document.getElementById("clearBtn");
+
+    const moodText = document.getElementById("moodText");
+    const moodDot = document.getElementById("moodDot");
+    const insightsList = document.getElementById("insightsList");
+    const suggestList = document.getElementById("suggestList");
+    const topicBadges = document.getElementById("topicBadges");
+
+    const thinkingHint = document.getElementById("thinkingHint");
+
+
+    /* 添加对话气泡 */
+    function addBubble(text, type) {
+      const div = document.createElement("div");
+      div.className = "bubble " + type;
+      div.textContent = text;
+      chatHistoryEl.appendChild(div);
+      chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    }
+
+
+    /* 填充示例 */
+    function fillExample(t) {
+      chatInput.value = t;
+      chatInput.focus();
+    }
+
+
+    /* Loading 状态 */
+    function setLoading(isLoading) {
+      if (isLoading) {
+        sendBtn.disabled = true;
+        sendBtn.style.opacity = "0.55";
+        thinkingHint.style.display = "block";
+      } else {
+        sendBtn.disabled = false;
+        sendBtn.style.opacity = "1";
+        thinkingHint.style.display = "none";
+      }
+    }
+
+
+    /* 调用后端 DeepSeek Agent */
+    async function callSocialAgent(userText) {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          messages: [
+            { role: "user", content: userText }
+          ]
+        })
+      });
+
+      const data = await res.json();
+      let raw = data.reply || "";
+
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return {
+          reply: raw,
+          mood: "未识别",
+          insights: "模型未按 JSON 返回。",
+          suggestions: [],
+          topics: []
+        };
+      }
+    }
+
+
+    /* 发送按钮 */
+    async function handleSend() {
+      const text = chatInput.value.trim();
+      if (!text) return;
+
+      addBubble(text, "user");
+      chatInput.value = "";
+
+      setLoading(true);
+
+      try {
+        const data = await callSocialAgent(text);
+        addBubble(data.reply || "（没有生成建议）", "ai");
+        updateSidePanel(data);
+      } catch (e) {
+        addBubble("AI 出现小状况，请稍后再试～", "ai");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+
+    /* 更新右侧洞察 */
+    function updateSidePanel(d) {
+      moodText.textContent = d.mood || "未知";
+
+      insightsList.textContent = d.insights || "无分析";
+
+      suggestList.innerHTML = "";
+      (d.suggestions || []).forEach(s => {
+        const item = document.createElement("div");
+        item.textContent = "· " + s;
+        suggestList.appendChild(item);
+      });
+
+      topicBadges.innerHTML = "";
+      (d.topics || []).forEach(t => {
+        const b = document.createElement("div");
+        b.className = "badge";
+        b.textContent = t;
+        topicBadges.appendChild(b);
+      });
+    }
+
+
+    sendBtn.onclick = handleSend;
+
+    chatInput.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    });
+
+
+    /* 清空对话 */
+    clearBtn.onclick = () => {
+      chatHistoryEl.innerHTML = "";
+      moodText.textContent = "等待输入…";
+      insightsList.textContent = "输入聊天内容后，这里会显示分析结果。";
+      suggestList.innerHTML = "";
+      topicBadges.innerHTML = "";
+      addBubble("对话已清空，你可以告诉我新的聊天困惑 😄", "ai");
+    };
+
+
+    /* 表情面板 */
+    const emojiBtn = document.getElementById("emojiBtn");
+    const emojiPicker = document.getElementById("emojiPicker");
+
+    emojiBtn.onclick = () => {
+      emojiPicker.style.display =
+        emojiPicker.style.display === "none" ? "flex" : "none";
+    };
+
+    emojiPicker.querySelectorAll("span").forEach(e => {
+      e.onclick = () => {
+        chatInput.value += e.textContent;
+        emojiPicker.style.display = "none";
+      };
+    });
+
+  </script>
+
+</body>
+
+</html>
+
