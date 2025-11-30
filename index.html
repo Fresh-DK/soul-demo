@@ -1,163 +1,104 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SOUL · 交个朋友</title>
-  <link rel="icon" href="assets/favicon.png" />
-  <style>
-    :root{
-      --bg1:#050710;
-      --bg2:#050308;
-      --accent:#ff66cc;
-      --accent2:#70e1ff;
-      --text:#f9fafb;
-    }
-    *{box-sizing:border-box;margin:0;padding:0}
-    html,body{
-      height:100%;
-      background:radial-gradient(circle at 10% 0%,#151532 0,#050710 40%,#050308 100%);
-      font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,Roboto,Helvetica,Arial,sans-serif;
-      color:var(--text);
-      overflow:hidden;
-    }
-    canvas#canvas{
-      position:fixed;
-      inset:0;
-      display:block;
-      z-index:0;
-    }
-    .ui-layer{
-      position:fixed;
-      inset:0;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:space-between;
-      padding:20px 24px 32px;
-      z-index:5;
-      pointer-events:none;
-    }
-    .top-bar{
-      width:100%;
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      font-size:13px;
-      letter-spacing:0.08em;
-      text-transform:uppercase;
-      color:rgba(249,250,251,0.68);
-    }
-    .top-left{
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
-    .logo-pill{
-      width:34px;
-      height:34px;
-      border-radius:12px;
-      background:conic-gradient(from 160deg,var(--accent),var(--accent2),var(--accent));
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      font-size:14px;
-      font-weight:800;
-      color:#050308;
-    }
-    .top-right{
-      font-size:12px;
-      color:rgba(249,250,251,0.7);
-    }
-    .center-hint{
-      margin-top:auto;
-      margin-bottom:auto;
-      text-align:center;
-      font-size:13px;
-      color:rgba(249,250,251,0.7);
-      pointer-events:none;
-    }
-    .bottom-area{
-      width:100%;
-      display:flex;
-      justify-content:center;
-    }
-    .enter-btn{
-      pointer-events:auto;
-      display:flex;
-      align-items:center;
-      gap:14px;
-      padding:10px 20px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,0.08);
-      background:linear-gradient(120deg,rgba(255,255,255,0.06),rgba(18,17,40,0.9));
-      box-shadow:0 20px 40px rgba(0,0,0,0.75);
-      cursor:pointer;
-      backdrop-filter:blur(16px);
-      -webkit-backdrop-filter:blur(16px);
-      transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
-    }
-    .enter-btn:hover{
-      transform:translateY(-1px) scale(1.01);
-      box-shadow:0 24px 50px rgba(0,0,0,0.85);
-      border-color:rgba(255,255,255,0.25);
-    }
-    .enter-icon{
-      width:44px;height:44px;border-radius:16px;
-      background:radial-gradient(circle at 20% 0%,#ffffff, var(--accent));
-      display:flex;align-items:center;justify-content:center;
-      font-weight:800;font-size:16px;color:#200516;
-      box-shadow:0 0 24px rgba(255,102,204,0.7);
-    }
-    .enter-text-main{
-      font-size:14px;font-weight:600;color:#f9fafb;
-    }
-    .enter-text-sub{
-      font-size:11px;color:rgba(249,250,251,0.7);
-    }
-    @media (max-width:640px){
-      .top-bar{font-size:11px}
-      .center-hint{font-size:12px}
-      .enter-btn{padding:9px 16px}
-      .enter-icon{width:40px;height:40px;font-size:14px}
-    }
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>SOUL · 交个朋友（Gemini 风格）</title>
+<link rel="icon" href="assets/favicon.png" />
+<style>
+  /* Gemini-like soft UI */
+  :root{
+    --bg-start: #f6f7fb;
+    --bg-end: #eef3ff;
+    --card-bg: rgba(255,255,255,0.75);
+    --accent1: #7c4dff;
+    --accent2: #ff66cc;
+    --text: #131824;
+  }
+  html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg-start),var(--bg-end));font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;color:var(--text);overflow:hidden}
+  /* full-canvas layer */
+  canvas#bgCanvas{position:fixed;inset:0;z-index:0;display:block}
+  /* centered card (Gemini-like) */
+  .card{
+    position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:min(1100px,94vw);max-width:1100px;height:min(720px,86vh);
+    border-radius:24px;background:linear-gradient(180deg, rgba(255,255,255,0.85), rgba(250,250,255,0.7));
+    box-shadow: 0 20px 60px rgba(20,30,60,0.12), inset 0 1px 0 rgba(255,255,255,0.6);
+    display:flex;gap:24px;padding:28px;z-index:5;backdrop-filter: blur(8px);
+    align-items:center;
+  }
+  /* left visual area holds the canvas overlay and description */
+  .left{
+    flex: 0 0 620px; height:100%; position:relative; border-radius:16px; overflow:hidden;
+    background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01));
+    display:flex;align-items:center;justify-content:center;
+  }
+  /* right content area */
+  .right{flex:1; padding:6px 10px;color:var(--text); display:flex;flex-direction:column; gap:12px;}
+  h1{margin:0;font-size:20px;color:var(--text);font-weight:700}
+  p.lead{margin:0;color:#354052;font-size:14px;line-height:1.5}
+  .controls{margin-top:auto;display:flex;gap:10px;align-items:center}
+  .btn{
+    padding:10px 14px;border-radius:12px;border:0;background:linear-gradient(90deg,var(--accent1),var(--accent2));color:white;font-weight:600;cursor:pointer;box-shadow:0 8px 20px rgba(124,77,255,0.12)
+  }
+  .mute{
+    padding:8px 10px;border-radius:10px;border:1px solid rgba(20,30,60,0.06);background:white;color:var(--text);cursor:pointer
+  }
+  .hint{font-size:12px;color:#6b7280}
+  /* small header */
+  .topbar{position:absolute;left:18px;top:18px;z-index:12;display:flex;gap:8px;align-items:center}
+  .logo{width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent2),var(--accent1));display:flex;align-items:center;justify-content:center;color:#1b0520;font-weight:800}
+  .sitename{font-weight:700;color:#17233c}
+  /* footer small */
+  .footer{position:absolute;left:18px;bottom:14px;font-size:12px;color:#7b8794}
+  /* responsive */
+  @media (max-width:980px){
+    .card{flex-direction:column;height:82vh;width:92vw;padding:18px}
+    .left{width:100%;height:54%}
+    .right{height:46%;padding:10px}
+  }
+</style>
 </head>
 <body>
-<canvas id="canvas"></canvas>
+<canvas id="bgCanvas"></canvas>
 
-<div class="ui-layer">
-  <div class="top-bar">
-    <div class="top-left">
-      <div class="logo-pill">SO</div>
-      <div>
-        <div style="font-weight:600;">SOUL · 交个朋友</div>
-        <div style="font-size:11px;color:rgba(249,250,251,.55)">Gesture Controlled Particle Logo</div>
+<div class="card" aria-hidden="false">
+  <div class="left" id="visual">
+    <div class="topbar" style="position:absolute">
+      <div class="logo">SU</div>
+      <div style="margin-left:8px">
+        <div class="sitename">SOUL · 交个朋友</div>
+        <div style="font-size:12px;color:#6b7280">用手势打开你的社交</div>
       </div>
     </div>
-    <div class="top-right">张开手掌轻散 · 握拳收拢为 SOUL</div>
+    <!-- the interactive visual area uses its own overlay canvas (script will create) -->
+    <div class="footer">张开巴掌展示开放状态 · 握拳收拢为 SOUL</div>
   </div>
 
-  <div class="center-hint">
-    允许摄像头后，伸出一只手即可控制粒子。<br/>
-    巴掌 &rarr; 粒子扩散一点；拳头 &rarr; 粒子在空间中动态收拢成立体 SOUL。
-  </div>
+  <div class="right">
+    <h1>交个朋友 — 互动原型</h1>
+    <p class="lead">通过摄像头识别单手手势：张开（Palm）会让 SOUL 轻微绽放；握拳（Fist）会触发立体收拢动画并加入动态螺旋吸入效果。此界面采用 Gemini 风格卡片，让视觉更干净、柔和。</p>
 
-  <div class="bottom-area">
-    <button id="enterBtn" class="enter-btn">
-      <div class="enter-icon">SOUL</div>
-      <div style="display:flex;flex-direction:column;align-items:flex-start">
-        <div class="enter-text-main">进入「交个朋友」体验站</div>
-        <div class="enter-text-sub">用 AI 社交智能体，帮你更自然地开口和聊下去</div>
-      </div>
-    </button>
+    <div style="display:flex;gap:10px;align-items:center">
+      <div class="hint">摄像头权限：打开以获得最佳体验（浏览器需 HTTPS 或 localhost）</div>
+    </div>
+
+    <div class="controls">
+      <button id="enterBtn" class="btn">进入 SUOL 网站</button>
+      <button id="muteBtn" class="mute">静音</button>
+      <div style="flex:1"></div>
+      <div style="font-size:12px;color:#9aa3b2">演示版 · 本地运行优先</div>
+    </div>
   </div>
 </div>
 
-<!-- MediaPipe Hands CDN -->
+<!-- small link area -->
+<div style="position:fixed;left:22px;bottom:18px;z-index:6;color:#6b7280;font-size:12px">如果摄像头不可用，请点击画面切换动画</div>
+
+<!-- MediaPipe CDN (hands) -->
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
+<!-- main interactive script -->
 <script src="script.js"></script>
 </body>
 </html>
